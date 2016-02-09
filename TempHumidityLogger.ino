@@ -154,11 +154,10 @@ void setup() {
     json.printTo(configFile);
     configFile.close();
     //end save
-
-    client.setServer(mqtt_server, stringToNumber(mqtt_port));
-    client.setCallback(callback);
   }
-
+  
+  client.setServer(mqtt_server, stringToNumber(mqtt_port));
+  client.setCallback(callback);
   Serial.println("local ip");
   Serial.println(WiFi.localIP());
   dht.begin();
