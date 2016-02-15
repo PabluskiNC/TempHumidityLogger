@@ -36,7 +36,7 @@ int  mqtt_value = 0;
 char mqtt_server[40];
 char mqtt_port[6] = "1883";
 char mqtt_topic[34] = "Out/Topic";
-char mqtt_clientID[12] = ;
+char mqtt_clientID[12] = "";
 
 //flag for saving data
 bool shouldSaveConfig = false;
