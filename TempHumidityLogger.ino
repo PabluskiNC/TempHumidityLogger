@@ -101,7 +101,7 @@ void setup() {
     sprintf(MAC_char,"%s%02x",MAC_char,MAC_array[i]);
   }
 
-  str_cpy(mqtt_clientId,MAC_char);
+  strcpy(mqtt_clientId,MAC_char);
 
   // The extra parameters to be configured (can be either global or just in the setup)
   // After connecting, parameter.getValue() will get you the configured value
