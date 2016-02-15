@@ -1,3 +1,12 @@
+/*
+* TempHumidityLogger
+* Pablo Sanchez
+* Jan 2016
+* Description: Use ESP8266 as a node in gathering temperature & Humidity data. The data is transmitted
+*              to an MQTT broker. The MQTT parameters (broker,ip:port topic, user, pw are all set at runtime.
+*
+*/
+
 #include <FS.h>                   //this needs to be first, or it all crashes and burns...
 
 #include "DHT.h"
@@ -6,6 +15,8 @@
 DHT dht(DHTPIN, DHTTYPE);
 
 #include <ESP8266WiFi.h>          //https://github.com/esp8266/Arduino
+uint8_t MAC_array[6];
+char MAC_char[18];
 
 //needed for library
 #include <DNSServer.h>
@@ -24,7 +35,8 @@ int  mqtt_value = 0;
 //define your default values here, if there are different values in config.json, they are overwritten.
 char mqtt_server[40];
 char mqtt_port[6] = "1883";
-char mqtt_topic[34] = "OutTopic";
+char mqtt_topic[34] = "Out/Topic";
+char mqtt_clientID[12] = ;
 
 //flag for saving data
 bool shouldSaveConfig = false;
@@ -82,11 +94,17 @@ void setup() {
 
 
 
+  WiFi.macAddress(MAC_array);
+  for (int i = 0; i < sizeof(MAC_array); ++i){
+    sprintf(MAC_char,"%s%02x",MAC_char,MAC_array[i]);
+  }
+
   // The extra parameters to be configured (can be either global or just in the setup)
   // After connecting, parameter.getValue() will get you the configured value
   // id/name placeholder/prompt default length
   WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 40);
   WiFiManagerParameter custom_mqtt_port("port", "mqtt port", mqtt_port, 5);
+  WiFiManagerParameter custom_mqtt_clientId("clientID", "mqtt clientId", mqtt_clientId, 12);
   WiFiManagerParameter custom_mqtt_topic("topic", "mqtt topic", mqtt_topic, 32);
 
   //WiFiManager
@@ -102,6 +120,7 @@ void setup() {
   //add all your parameters here
   wifiManager.addParameter(&custom_mqtt_server);
   wifiManager.addParameter(&custom_mqtt_port);
+  wifiManager.addParameter(&custom_mqtt_clientId);
   wifiManager.addParameter(&custom_mqtt_topic);
 
   //reset settings - for testing
@@ -134,6 +153,7 @@ void setup() {
   //read updated parameters
   strcpy(mqtt_server, custom_mqtt_server.getValue());
   strcpy(mqtt_port, custom_mqtt_port.getValue());
+  strcpy(mqtt_topic, custom_mqtt_clientID.getValue());
   strcpy(mqtt_topic, custom_mqtt_topic.getValue());
 
   //save the custom parameters to FS
@@ -143,6 +163,7 @@ void setup() {
     JsonObject& json = jsonBuffer.createObject();
     json["mqtt_server"] = mqtt_server;
     json["mqtt_port"] = mqtt_port;
+    json["mqtt_topic"] = mqtt_clientId;
     json["mqtt_topic"] = mqtt_topic;
 
     File configFile = SPIFFS.open("/config.json", "w");
@@ -175,25 +196,25 @@ int stringToNumber(String thisString) {
   return value;
 }
 
-void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.print("] ");
-  for (int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
-  }
-  Serial.println();
-
-  // Switch on the LED if an 1 was received as first character
-  if ((char)payload[0] == '1') {
-    digitalWrite(BUILTIN_LED, LOW);   // Turn the LED on (Note that LOW is the voltage level
-    // but actually the LED is on; this is because
-    // it is acive low on the ESP-01)
-  } else {
-    digitalWrite(BUILTIN_LED, HIGH);  // Turn the LED off by making the voltage HIGH
-  }
-
-}
+//void callback(char* topic, byte* payload, unsigned int length) {
+//  Serial.print("Message arrived [");
+//  Serial.print(topic);
+//  Serial.print("] ");
+//  for (int i = 0; i < length; i++) {
+//    Serial.print((char)payload[i]);
+//  }
+//  Serial.println();
+//
+//  // Switch on the LED if an 1 was received as first character
+//  if ((char)payload[0] == '1') {
+//    digitalWrite(BUILTIN_LED, LOW);   // Turn the LED on (Note that LOW is the voltage level
+//    // but actually the LED is on; this is because
+//    // it is acive low on the ESP-01)
+//  } else {
+//    digitalWrite(BUILTIN_LED, HIGH);  // Turn the LED off by making the voltage HIGH
+//  }
+//
+//}
 
 void reconnect() {
   // Loop until we're reconnected
@@ -204,7 +225,7 @@ void reconnect() {
     Serial.print(mqtt_port);
     Serial.print("...");
     // Attempt to connect
-    if (client.connect("ESP8266Client")) {
+    if (client.connect(mqtt_clientId)) {
       Serial.println("connected");
       // Once connected, publish an announcement...
       client.publish(mqtt_topic, "Reconnected");
