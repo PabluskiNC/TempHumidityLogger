@@ -25,7 +25,7 @@ char MAC_char[18];
 
 #include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson
 
-#include <PubSubClient.h>
+#include <PubSubClient.h> 	  //https://github.com/knolleary/pubsubclient
 WiFiClient espClient;
 PubSubClient client(espClient);
 long mqtt_lastMsg = 0;
@@ -36,7 +36,8 @@ int  mqtt_value = 0;
 char mqtt_server[40];
 char mqtt_port[6] = "1883";
 char mqtt_topic[34] = "Out/Topic";
-char mqtt_clientID[12] = "";
+char mqtt_topic_full[50] = "";
+char mqtt_clientId[12] = "";
 
 //flag for saving data
 bool shouldSaveConfig = false;
@@ -80,6 +81,7 @@ void setup() {
 
           strcpy(mqtt_server, json["mqtt_server"]);
           strcpy(mqtt_port, json["mqtt_port"]);
+          strcpy(mqtt_topic, json["mqtt_clientId"]);
           strcpy(mqtt_topic, json["mqtt_topic"]);
 
         } else {
@@ -93,18 +95,20 @@ void setup() {
   //end read
 
 
-
+  // get the MAC address for a clientID
   WiFi.macAddress(MAC_array);
   for (int i = 0; i < sizeof(MAC_array); ++i){
     sprintf(MAC_char,"%s%02x",MAC_char,MAC_array[i]);
   }
+
+  str_cpy(mqtt_clientId,MAC_char);
 
   // The extra parameters to be configured (can be either global or just in the setup)
   // After connecting, parameter.getValue() will get you the configured value
   // id/name placeholder/prompt default length
   WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 40);
   WiFiManagerParameter custom_mqtt_port("port", "mqtt port", mqtt_port, 5);
-  WiFiManagerParameter custom_mqtt_clientId("clientID", "mqtt clientId", mqtt_clientId, 12);
+  WiFiManagerParameter custom_mqtt_clientId("clientId", "mqtt clientId", mqtt_clientId, 12);
   WiFiManagerParameter custom_mqtt_topic("topic", "mqtt topic", mqtt_topic, 32);
 
   //WiFiManager
@@ -153,7 +157,7 @@ void setup() {
   //read updated parameters
   strcpy(mqtt_server, custom_mqtt_server.getValue());
   strcpy(mqtt_port, custom_mqtt_port.getValue());
-  strcpy(mqtt_topic, custom_mqtt_clientID.getValue());
+  strcpy(mqtt_clientId, custom_mqtt_clientId.getValue());
   strcpy(mqtt_topic, custom_mqtt_topic.getValue());
 
   //save the custom parameters to FS
@@ -163,7 +167,7 @@ void setup() {
     JsonObject& json = jsonBuffer.createObject();
     json["mqtt_server"] = mqtt_server;
     json["mqtt_port"] = mqtt_port;
-    json["mqtt_topic"] = mqtt_clientId;
+    json["mqtt_clientId"] = mqtt_clientId;
     json["mqtt_topic"] = mqtt_topic;
 
     File configFile = SPIFFS.open("/config.json", "w");
@@ -177,6 +181,10 @@ void setup() {
     //end save
   }
   
+  strcpy(mqtt_topic_full,mqtt_clientId);
+  strcpy(mqtt_topic_full,"/");
+  strcpy(mqtt_topic_full,mqtt_topic);
+
   client.setServer(mqtt_server, stringToNumber(mqtt_port));
   client.setCallback(callback);
   Serial.println("local ip");
@@ -196,25 +204,25 @@ int stringToNumber(String thisString) {
   return value;
 }
 
-//void callback(char* topic, byte* payload, unsigned int length) {
-//  Serial.print("Message arrived [");
-//  Serial.print(topic);
-//  Serial.print("] ");
-//  for (int i = 0; i < length; i++) {
-//    Serial.print((char)payload[i]);
-//  }
-//  Serial.println();
-//
-//  // Switch on the LED if an 1 was received as first character
-//  if ((char)payload[0] == '1') {
-//    digitalWrite(BUILTIN_LED, LOW);   // Turn the LED on (Note that LOW is the voltage level
-//    // but actually the LED is on; this is because
-//    // it is acive low on the ESP-01)
-//  } else {
-//    digitalWrite(BUILTIN_LED, HIGH);  // Turn the LED off by making the voltage HIGH
-//  }
-//
-//}
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+
+  // Switch on the LED if an 1 was received as first character
+  if ((char)payload[0] == '1') {
+    digitalWrite(BUILTIN_LED, LOW);   // Turn the LED on (Note that LOW is the voltage level
+    // but actually the LED is on; this is because
+    // it is acive low on the ESP-01)
+  } else {
+    digitalWrite(BUILTIN_LED, HIGH);  // Turn the LED off by making the voltage HIGH
+  }
+
+}
 
 void reconnect() {
   // Loop until we're reconnected
@@ -270,8 +278,8 @@ void loop() {
     //  Serial.println(msg);
     //  client.publish(mqtt_topic, msg);
     //}
-    char pub_topic[34];
-    strcpy(pub_topic,mqtt_topic);
+    char pub_topic[70];
+    strcpy(pub_topic,mqtt_topic_full);
     strcat(pub_topic,"/temperature");
     client.publish( pub_topic , mqtt_msg);
     Serial.print("Publish: ");
@@ -282,7 +290,7 @@ void loop() {
     dtostrf(h,4,2,temp); //convert float to char
     snprintf (mqtt_msg, 50, "%s %", temp);
 
-    strcpy(pub_topic,mqtt_topic);
+    strcpy(pub_topic,mqtt_topic_full);
     strcat(pub_topic,"/humidity");
     client.publish(pub_topic,mqtt_msg);
     Serial.print("Publish: ");
