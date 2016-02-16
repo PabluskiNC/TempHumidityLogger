@@ -33,9 +33,9 @@ char mqtt_msg[50];
 int  mqtt_value = 0;
 
 //define your default values here, if there are different values in config.json, they are overwritten.
-char mqtt_server[40];
+char mqtt_server[40] = "";
 char mqtt_port[6] = "1883";
-char mqtt_topic[34] = "Out/Topic";
+char mqtt_topic[34] = "";
 char mqtt_topic_full[50] = "";
 char mqtt_clientId[12] = "";
 
@@ -231,12 +231,13 @@ void reconnect() {
     Serial.print(mqtt_server);
     Serial.print(":");
     Serial.print(mqtt_port);
-    Serial.print("...");
+    Serial.print(" as ");
+    Serial.println(mqtt_clientId);
     // Attempt to connect
     if (client.connect(mqtt_clientId)) {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      client.publish(mqtt_topic, "Reconnected");
+      // client.publish(mqtt_topic, "Reconnected");
       // ... and resubscribe
       //client.subscribe("inTopic");
     } else {
@@ -256,6 +257,7 @@ void loop() {
   float t = dht.readTemperature();
   if (isnan(t) || isnan(h)) {
     Serial.println("Failed to read from DHT");
+    delay(5000);  // retry after a small wait
   } else {
     Serial.print("Temp:");
     Serial.print(t);
@@ -297,6 +299,6 @@ void loop() {
     Serial.print(pub_topic);
     Serial.print(" , ");
     Serial.println(mqtt_msg);
+    delay(55000);
   }
-  delay(5000);
 }
