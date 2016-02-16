@@ -25,7 +25,7 @@ char MAC_char[18];
 
 #include <ArduinoJson.h>          //https://github.com/bblanchon/ArduinoJson
 
-#include <PubSubClient.h> 	  //https://github.com/knolleary/pubsubclient
+#include <PubSubClient.h>     //https://github.com/knolleary/pubsubclient
 WiFiClient espClient;
 PubSubClient client(espClient);
 long mqtt_lastMsg = 0;
@@ -37,7 +37,7 @@ char mqtt_server[40] = "";
 char mqtt_port[6] = "1883";
 char mqtt_topic[34] = "";
 char mqtt_topic_full[50] = "";
-char mqtt_clientId[12] = "";
+char mqtt_clientId[15] = "";
 
 //flag for saving data
 bool shouldSaveConfig = false;
@@ -108,7 +108,7 @@ void setup() {
   // id/name placeholder/prompt default length
   WiFiManagerParameter custom_mqtt_server("server", "mqtt server", mqtt_server, 40);
   WiFiManagerParameter custom_mqtt_port("port", "mqtt port", mqtt_port, 5);
-  WiFiManagerParameter custom_mqtt_clientId("clientId", "mqtt clientId", mqtt_clientId, 12);
+  WiFiManagerParameter custom_mqtt_clientId("clientId", "mqtt clientId", mqtt_clientId, 15);
   WiFiManagerParameter custom_mqtt_topic("topic", "mqtt topic", mqtt_topic, 32);
 
   //WiFiManager
@@ -128,7 +128,7 @@ void setup() {
   wifiManager.addParameter(&custom_mqtt_topic);
 
   //reset settings - for testing
-  //wifiManager.resetSettings();
+  wifiManager.resetSettings();
 
   //set minimu quality of signal so it ignores AP's under that quality
   //defaults to 8%
@@ -137,7 +137,7 @@ void setup() {
   //sets timeout until configuration portal gets turned off
   //useful to make it all retry or go to sleep
   //in seconds
-  //wifiManager.setTimeout(120);
+  wifiManager.setTimeout(120);
 
   //fetches ssid and pass and tries to connect
   //if it does not connect it starts an access point with the specified name
@@ -182,8 +182,8 @@ void setup() {
   }
   
   strcpy(mqtt_topic_full,mqtt_clientId);
-  strcpy(mqtt_topic_full,"/");
-  strcpy(mqtt_topic_full,mqtt_topic);
+  strcat(mqtt_topic_full,"/");
+  strcat(mqtt_topic_full,mqtt_topic);
 
   client.setServer(mqtt_server, stringToNumber(mqtt_port));
   client.setCallback(callback);
